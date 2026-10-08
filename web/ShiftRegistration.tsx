@@ -72,7 +72,7 @@ export default function ShiftRegistration({ me }: { me: Me }) {
   const firstAvailableDay = days.find((day) => {
     const date = iso(day);
     const existing = shiftsByDate.get(date);
-    return date >= today && (!existing || existing.status === "pending");
+    return date >= today && (!existing || existing.status === "pending" || existing.status === "rejected");
   });
   const todayShift = shiftsByDate.get(today);
   const upcomingShifts = days
@@ -157,10 +157,6 @@ export default function ShiftRegistration({ me }: { me: Me }) {
       toast("info", "Ca này đã được quản lý duyệt");
       return;
     }
-    if (existing?.status === "rejected") {
-      toast("err", "Ca này đã bị từ chối; vui lòng liên hệ quản lý để đăng ký lại");
-      return;
-    }
     setFormDate(date);
     setFormStart(hm(existing?.check_in_1 ?? null));
     setFormEnd(hm(existing?.check_out_1 ?? null));
@@ -203,10 +199,6 @@ export default function ShiftRegistration({ me }: { me: Me }) {
       toast("err", "Ca đã được duyệt, bạn không thể sửa");
       return;
     }
-    if (existing?.status === "rejected") {
-      toast("err", "Ca đã bị từ chối; vui lòng liên hệ quản lý để đăng ký lại");
-      return;
-    }
 
     setBusy(true);
     const { error } = await supabase.from("shifts").upsert({
@@ -223,7 +215,11 @@ export default function ShiftRegistration({ me }: { me: Me }) {
       toast("err", "Gửi đăng ký ca thất bại: " + error.message);
       return;
     }
-    toast("ok", existing ? "Đã cập nhật ca, chờ quản lý duyệt" : "Đã gửi đăng ký ca, chờ quản lý duyệt");
+    toast("ok", existing?.status === "rejected"
+      ? "Đã đăng ký lại ca, chờ quản lý duyệt"
+      : existing
+        ? "Đã cập nhật ca, chờ quản lý duyệt"
+        : "Đã gửi đăng ký ca, chờ quản lý duyệt");
     setFormOpen(false);
     setMonday(mondayOf(new Date(`${formDate}T00:00:00`)));
     loadShifts();
@@ -294,8 +290,8 @@ export default function ShiftRegistration({ me }: { me: Me }) {
               )}
             </section>
 
-            <section className="grid grid-cols-3 gap-2">
-              {[["CA ĐÃ DUYỆT", approvedCount, "bg-emerald-50 text-emerald-700"], ["CHỜ DUYỆT", pendingCount, "bg-amber-50 text-amber-700"], ["CA TRONG TUẦN", shifts.length, "bg-blue-50 text-blue-700"]].map(([label, count, color]) => (
+            <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[["CA ĐÃ DUYỆT", approvedCount, "bg-emerald-50 text-emerald-700"], ["CHỜ DUYỆT", pendingCount, "bg-amber-50 text-amber-700"], ["BỊ TỪ CHỐI", shifts.filter((shift) => shift.status === "rejected").length, "bg-rose-50 text-rose-700"], ["CA TRONG TUẦN", shifts.length, "bg-blue-50 text-blue-700"]].map(([label, count, color]) => (
                 <div key={label} className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm"><p className="truncate text-[8px] font-bold tracking-[0.03em] text-slate-400">{label}</p><p className={`mt-2 inline-flex min-w-7 items-center justify-center rounded-lg px-2 py-1 text-sm font-extrabold ${color}`}>{count}</p></div>
               ))}
             </section>
@@ -356,33 +352,31 @@ export default function ShiftRegistration({ me }: { me: Me }) {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
                 {days.map((day) => {
                   const date = iso(day);
                   const shift = shiftsByDate.get(date);
                   return (
-                    <article key={date} className="rounded-xl border border-slate-100 bg-white p-3.5 transition hover:border-orange-200 hover:shadow-sm">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-[11px] font-medium text-slate-500">{THU[day.getDay()]}</p>
-                          <p className="mt-0.5 text-lg font-bold leading-none text-slate-900">{String(day.getDate()).padStart(2, "0")}<span className="ml-1 text-xs font-medium text-slate-500">/{String(day.getMonth() + 1).padStart(2, "0")}</span></p>
+                    <article key={date} className={`rounded-xl border p-3 transition ${shift?.status === "rejected" ? "border-rose-200 bg-rose-50/40" : date === today ? "border-orange-200 bg-orange-50/30" : "border-slate-100 bg-white"}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${date === today ? "bg-orange-600 text-white" : "bg-slate-100 text-slate-700"}`}>
+                          <span className="text-[9px] font-bold uppercase">{THU[day.getDay()]}</span>
+                          <span className="text-base font-extrabold leading-4">{String(day.getDate()).padStart(2, "0")}</span>
                         </div>
-                        {shift && <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ring-1 ring-inset ${BADGE[shift.status]}`}>{LABEL[shift.status]}</span>}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-slate-800">{day.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "long" })}{date === today && <span className="ml-1.5 text-[9px] font-bold uppercase text-orange-700">Hôm nay</span>}</p>
+                          <p className="mt-0.5 text-[10px] text-slate-500">{shift ? `${shiftNameFor(hm(shift.check_in_1), hm(shift.check_out_1))} · ${hm(shift.check_in_1)} – ${hm(shift.check_out_1)}` : "Chưa đăng ký ca"}</p>
+                        </div>
+                        {shift
+                          ? <span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold ring-1 ring-inset ${BADGE[shift.status]}`}>{LABEL[shift.status]}</span>
+                          : <span className="shrink-0 text-[10px] font-medium text-slate-400">—</span>}
                       </div>
-                      {shift ? (
-                        <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2.5">
-                          <p className="text-xs font-semibold text-slate-800">{shiftNameFor(hm(shift.check_in_1), hm(shift.check_out_1))}</p>
-                          <p className="mt-1 text-xs text-slate-600">{hm(shift.check_in_1)} – {hm(shift.check_out_1)}</p>
-                          {shift.check_in_2 && shift.check_out_2 && <p className="mt-1 text-xs text-slate-600">{hm(shift.check_in_2)} – {hm(shift.check_out_2)}</p>}
-                          {shift.status === "pending" && (
-                            <button type="button" onClick={() => openShiftForm(date)} className="mt-2 text-xs font-semibold text-orange-700 hover:underline">Chỉnh sửa đăng ký</button>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="mt-3 flex min-h-[74px] items-center justify-between gap-2 rounded-lg border border-dashed border-slate-200 px-3 py-2">
-                          <span className="text-xs text-slate-400">{loadingShifts ? "Đang tải lịch…" : "Chưa có ca làm"}</span>
-                          {date >= iso(new Date()) && !loadingShifts && <button type="button" onClick={() => openShiftForm(date)} className="text-xs font-semibold text-orange-700 hover:underline">Thêm ca</button>}
-                        </div>
+                      {shift?.check_in_2 && shift.check_out_2 && <p className="ml-[60px] mt-1 text-[10px] text-slate-500">Ca 2 · {hm(shift.check_in_2)} – {hm(shift.check_out_2)}</p>}
+                      {shift?.status === "rejected" && <p className="ml-[60px] mt-1 text-[10px] font-medium text-rose-700">Ca bị từ chối. Bạn có thể chỉnh giờ và gửi đăng ký lại.</p>}
+                      {date >= today && !loadingShifts && shift?.status !== "approved" && (
+                        <button type="button" onClick={() => openShiftForm(date)} className={`mt-2 min-h-9 w-full rounded-lg px-3 text-left text-[11px] font-bold ${shift?.status === "rejected" ? "bg-rose-100 text-rose-800 hover:bg-rose-200" : shift?.status === "pending" ? "bg-orange-50 text-orange-800 hover:bg-orange-100" : "border border-dashed border-slate-200 text-orange-700 hover:bg-orange-50"}`}>
+                          {shift?.status === "rejected" ? "↻  Đăng ký lại ca này" : shift?.status === "pending" ? "Chỉnh sửa đăng ký" : "＋  Đăng ký ca"}
+                        </button>
                       )}
                     </article>
                   );
@@ -450,11 +444,12 @@ export default function ShiftRegistration({ me }: { me: Me }) {
             <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-100 bg-white px-5 py-4 sm:px-6">
               <div>
                 <p className="text-[10px] font-bold tracking-[0.14em] text-orange-700">ĐĂNG KÝ LỊCH TUẦN</p>
-                <h2 id="shift-form-title" className="mt-1 text-lg font-bold text-slate-900">Đăng ký ca làm</h2>
+                <h2 id="shift-form-title" className="mt-1 text-lg font-bold text-slate-900">{shiftsByDate.get(formDate)?.status === "rejected" ? "Đăng ký lại ca làm" : "Đăng ký ca làm"}</h2>
               </div>
               <button type="button" aria-label="Đóng form" onClick={() => setFormOpen(false)} className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200">×</button>
             </div>
             <form onSubmit={submitShift} className="space-y-4 px-5 py-4 sm:px-6">
+              {shiftsByDate.get(formDate)?.status === "rejected" && <p className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2.5 text-xs leading-5 text-rose-800">Ca trước đã bị từ chối. Kiểm tra hoặc đổi khung giờ bên dưới rồi gửi lại để quản lý duyệt.</p>}
               <label className="block text-xs font-semibold text-slate-700">Ngày làm việc
                 <input type="date" value={formDate} min={iso(new Date())} max={iso(days[6])} onChange={(event) => updateFormDate(event.target.value)} required className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100" />
               </label>
@@ -504,7 +499,7 @@ export default function ShiftRegistration({ me }: { me: Me }) {
               </div>
               <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
                 <button type="button" onClick={() => setFormOpen(false)} className="h-11 rounded-xl bg-slate-100 text-sm font-semibold text-slate-700 transition hover:bg-slate-200">Hủy bỏ</button>
-                <button type="submit" disabled={busy} className="h-11 rounded-xl bg-orange-600 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60">{busy ? "Đang gửi…" : "Gửi đăng ký ca"}</button>
+                <button type="submit" disabled={busy} className="h-11 rounded-xl bg-orange-600 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60">{busy ? "Đang gửi…" : shiftsByDate.get(formDate)?.status === "rejected" ? "Gửi đăng ký lại" : "Gửi đăng ký ca"}</button>
               </div>
             </form>
           </section>

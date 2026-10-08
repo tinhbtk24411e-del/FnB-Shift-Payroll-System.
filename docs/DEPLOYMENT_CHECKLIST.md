@@ -7,6 +7,7 @@
 - [ ] Kiểm tra RLS
 - [ ] Kiểm tra `v_payroll_days`
 - [ ] Chạy `database/05_notifications.sql` trên DB TEST trước khi production
+- [ ] Chạy `database/06_allow_resubmit_rejected_shift.sql` trên DB TEST để nhân viên gửi lại ca bị từ chối
 - [ ] Xác nhận `public.notifications` thuộc publication `supabase_realtime`
 - [ ] Thử RLS: tài khoản không đọc được notification của user khác
 
