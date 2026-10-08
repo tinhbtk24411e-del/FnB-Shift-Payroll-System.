@@ -26,10 +26,30 @@ export default function Staff() {
   useEffect(() => { load(); }, [load]);
 
   async function token() { return (await supabase.auth.getSession()).data.session?.access_token; }
+  function apiErrorMessage(body: unknown, status: number, statusText: string) {
+    if (typeof body === "object" && body !== null && "detail" in body) {
+      const detail = body.detail;
+      if (typeof detail === "string") return detail;
+      if (Array.isArray(detail)) {
+        const messages = detail.map((item) => {
+          if (typeof item !== "object" || item === null) return String(item);
+          const issue = item as { loc?: unknown; msg?: unknown };
+          const field = Array.isArray(issue.loc) ? issue.loc.filter((part): part is string => typeof part === "string").join(".") : "";
+          const message = typeof issue.msg === "string" ? issue.msg : "";
+          return field && message ? `${field}: ${message}` : message || JSON.stringify(item);
+        }).filter(Boolean);
+        if (messages.length) return messages.join("; ");
+      }
+    }
+    return `API trả lỗi ${status}${statusText ? ` (${statusText})` : ""}, không có thông tin chi tiết.`;
+  }
   async function api(path: string, body: unknown) {
     const res = await fetch(`${process.env.NEXT_PUBLIC_PAYROLL_API}${path}`, { method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${await token()}` }, body: JSON.stringify(body) });
-    if (!res.ok) { const j = await res.json().catch(() => null); throw new Error(typeof j?.detail === "string" ? j.detail : "Yêu cầu không hợp lệ (kiểm tra mật khẩu ≥ 6 ký tự, mã NV chỉ gồm chữ/số)"); }
+    if (!res.ok) {
+      const responseBody: unknown = await res.json().catch(() => null);
+      throw new Error(apiErrorMessage(responseBody, res.status, res.statusText));
+    }
   }
 
   async function save() {
