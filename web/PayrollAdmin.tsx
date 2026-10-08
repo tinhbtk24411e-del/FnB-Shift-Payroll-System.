@@ -58,11 +58,15 @@ export default function PayrollAdmin({ approvalRequest }: { approvalRequest: num
 
   const loadPending = useCallback(async () => {
     const [shiftResult, leaveResult] = await Promise.all([
-      supabase.from("shifts").select("*, users(emp_code, full_name)").eq("status", "pending").order("work_date"),
-      supabase.from("leave_requests").select("*, users(emp_code, full_name)").eq("status", "pending").order("leave_date"),
+      supabase.from("shifts").select("*, users:users!shifts_user_id_fkey(emp_code, full_name)").eq("status", "pending").order("work_date"),
+      supabase.from("leave_requests").select("*, users:users!leave_requests_user_id_fkey(emp_code, full_name)").eq("status", "pending").order("leave_date"),
     ]);
     if (shiftResult.error || leaveResult.error) {
-      toast("err", `Không tải được danh sách chờ duyệt: ${shiftResult.error?.message ?? leaveResult.error?.message}`);
+      const errors = [
+        shiftResult.error && `ca: ${shiftResult.error.message}`,
+        leaveResult.error && `đơn nghỉ: ${leaveResult.error.message}`,
+      ].filter(Boolean);
+      toast("err", `Không tải được danh sách chờ duyệt (${errors.join("; ")})`);
       return;
     }
     setShifts((shiftResult.data ?? []) as ShiftJ[]);
