@@ -17,7 +17,8 @@ Trang này dùng JSON local, không cần ZKTeco và không cần đăng nhập.
 ## Cách nạp demo vào Supabase
 
 1. Đã chạy `database/01_schema_v2.sql`.
-2. Tạo `api/.env` với `SUPABASE_URL` và `SUPABASE_SERVICE_KEY`.
+2. Cấu hình `SUPABASE_URL` và **service-role secret key** trong `api/.env.local` hoặc `api/.env`.
+   Publishable/anon key không có quyền seed. Không chia sẻ khóa service role và chỉ dùng database demo.
 3. Chạy:
 
 ```bash
@@ -30,6 +31,11 @@ python -m venv .venv
 pip install -r requirements.txt
 python seed_demo.py
 ```
+
+Script nạp chấm công trực tiếp từ `web/data/demo_attendance_october_2026.json`.
+Các file nhân viên, NOTE và workflow chờ duyệt được đọc từ `demo/data/`.
+Lần nạp thông thường sẽ dừng nếu database đã có mã nhân viên demo trùng; không chạy `--force`
+trên database thật.
 
 Nếu muốn tạo lại dữ liệu tháng 10/2026:
 

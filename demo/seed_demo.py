@@ -1,6 +1,7 @@
 """Seed demo F&B data vào Supabase để trình diễn khi chưa có máy chấm công.
 
-Nguồn dữ liệu: demo/data/*.json.
+Nguồn dữ liệu attendance: web/data/demo_attendance_october_2026.json.
+Các dữ liệu demo khác: demo/data/*.json.
 Tài khoản demo: mã NV @company.local, mật khẩu mặc định Demo123!
 
 Chạy lần đầu trên database demo trống:
@@ -15,6 +16,9 @@ tháng 10/2026 và cập nhật hồ sơ theo bộ nhân sự demo.
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
+import json
 import os
 from datetime import datetime
 from pathlib import Path
@@ -23,12 +27,14 @@ from dotenv import load_dotenv
 from supabase import create_client
 
 ROOT = Path(__file__).resolve().parent
+load_dotenv(ROOT.parent / "api" / ".env.local")
 load_dotenv(ROOT.parent / "api" / ".env")
 load_dotenv(ROOT / ".env")
 
 DEMO_DEVICE = "DEMO-ZK01"
 DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "Demo123!")
 TZ = "+07:00"
+ATTENDANCE_FILE = ROOT.parent / "web" / "data" / "demo_attendance_october_2026.json"
 
 
 def sb_client():
@@ -36,12 +42,28 @@ def sb_client():
     key = os.getenv("SUPABASE_SERVICE_KEY")
     if not url or not key:
         raise SystemExit("Thiếu SUPABASE_URL hoặc SUPABASE_SERVICE_KEY. Có thể dùng api/.env.")
+    if key.startswith("sb_secret_"):
+        is_service_key = True
+    else:
+        try:
+            payload = key.split(".")[1]
+            payload += "=" * (-len(payload) % 4)
+            claims = json.loads(base64.urlsafe_b64decode(payload))
+            is_service_key = claims.get("role") == "service_role"
+        except (IndexError, ValueError, binascii.Error):
+            is_service_key = False
+    if not is_service_key:
+        raise SystemExit(
+            "SUPABASE_SERVICE_KEY phải là khóa bí mật service_role; "
+            "publishable/anon key không đủ quyền để nạp dữ liệu."
+        )
     return create_client(url, key)
 
 
 def load_json(name: str):
     import json
-    return json.loads((ROOT / "data" / name).read_text(encoding="utf-8"))
+    path = ATTENDANCE_FILE if name == "attendance_october_2026.json" else ROOT / "data" / name
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def auth_users_map(sb):
