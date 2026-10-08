@@ -1,0 +1,36 @@
+{
+  "pending_shifts": [
+    {
+      "emp_code": "PC04",
+      "date": "2026-10-08",
+      "in1": "14:00",
+      "out1": "22:30"
+    },
+    {
+      "emp_code": "TN03",
+      "date": "2026-10-10",
+      "in1": "06:00",
+      "out1": "14:00"
+    },
+    {
+      "emp_code": "PV05",
+      "date": "2026-10-09",
+      "in1": "17:00",
+      "out1": "22:45"
+    }
+  ],
+  "pending_leaves": [
+    {
+      "emp_code": "PV03",
+      "leave_date": "2026-10-15",
+      "reason": "Lịch học - demo khách hàng",
+      "status": "pending"
+    },
+    {
+      "emp_code": "PC08",
+      "leave_date": "2026-10-18",
+      "reason": "Việc cá nhân - demo khách hàng",
+      "status": "pending"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+services:
+  api:
+    build: ./api
+    restart: unless-stopped
+    env_file: [./api/.env]
+    ports: ["8000:8000"]
+  agent:
+    profiles: ["store"]
+    build: ./agent
+    restart: unless-stopped
+    network_mode: host
+    env_file: [./agent/.env]
+    volumes: [./agent/data:/data]

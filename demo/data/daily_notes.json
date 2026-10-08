@@ -1,0 +1,38 @@
+[
+  {
+    "emp_code": "PC01",
+    "date": "2026-10-11",
+    "note_text": "1 ly Olong chanh vàng",
+    "adjustment_amount": 69000
+  },
+  {
+    "emp_code": "PC01",
+    "date": "2026-10-13",
+    "note_text": "Kết két âm 15k",
+    "adjustment_amount": 15000
+  },
+  {
+    "emp_code": "PC01",
+    "date": "2026-10-28",
+    "note_text": "Không dọn nồi trân châu",
+    "adjustment_amount": 20000
+  },
+  {
+    "emp_code": "TN01",
+    "date": "2026-10-05",
+    "note_text": "Thiếu tiền két",
+    "adjustment_amount": 30000
+  },
+  {
+    "emp_code": "PV01",
+    "date": "2026-10-15",
+    "note_text": "Làm vỡ ly trà sữa",
+    "adjustment_amount": 25000
+  },
+  {
+    "emp_code": "PC02",
+    "date": "2026-10-20",
+    "note_text": "Thưởng ca đông khách",
+    "adjustment_amount": -50000
+  }
+]

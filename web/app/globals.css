@@ -1,0 +1,4 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root{color-scheme:light} html,body{min-height:100%} body{margin:0;background:#fff7ed;color:#1f2937} button,input,select,textarea{font:inherit}

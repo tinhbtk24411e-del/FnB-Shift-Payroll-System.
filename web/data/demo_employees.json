@@ -1,0 +1,233 @@
+[
+  {
+    "code": "QL01",
+    "name": "Pham Gia Huy",
+    "role": "Quản lý",
+    "hourly_rate": 35000,
+    "allowance": 30000
+  },
+  {
+    "code": "PC01",
+    "name": "Anh Đức",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PC02",
+    "name": "Cẩm Ly",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PC03",
+    "name": "Điển Quân",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PC04",
+    "name": "Hai Dang Nguyen Hoang",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PC05",
+    "name": "Khang Nguyễn",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PC06",
+    "name": "Minh Hi",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PC07",
+    "name": "Phương Ngân",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PC08",
+    "name": "Phương Thùy",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PC09",
+    "name": "Thiên Phước",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PC10",
+    "name": "Thúy Ngân",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PC11",
+    "name": "Tuấn Thành",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PC12",
+    "name": "Việt Quang",
+    "role": "Pha chế",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "TN01",
+    "name": "Bảo Ngân",
+    "role": "Thu ngân",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "TN02",
+    "name": "Gấm",
+    "role": "Thu ngân",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "TN03",
+    "name": "Nguyễn Như",
+    "role": "Thu ngân",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "TN04",
+    "name": "Như Ý",
+    "role": "Thu ngân",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "TN05",
+    "name": "Quý Tiên",
+    "role": "Thu ngân",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "TN06",
+    "name": "Thùy Dung",
+    "role": "Thu ngân",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "TN07",
+    "name": "Thuyvan Ta",
+    "role": "Thu ngân",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "TN08",
+    "name": "Uribora",
+    "role": "Thu ngân",
+    "hourly_rate": 25000,
+    "allowance": 25000
+  },
+  {
+    "code": "PV01",
+    "name": "Darwin",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  },
+  {
+    "code": "PV02",
+    "name": "Gia Tự",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  },
+  {
+    "code": "PV03",
+    "name": "Hồ Nam",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  },
+  {
+    "code": "PV04",
+    "name": "Lam Duc",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  },
+  {
+    "code": "PV05",
+    "name": "Nguyenhuynhanhtuan",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  },
+  {
+    "code": "PV06",
+    "name": "Phạm Đức Quân",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  },
+  {
+    "code": "PV07",
+    "name": "Tài Phạm",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  },
+  {
+    "code": "PV08",
+    "name": "Thanh Phong",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  },
+  {
+    "code": "PV09",
+    "name": "Trịnh Văn Đạt",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  },
+  {
+    "code": "PV10",
+    "name": "Trường Giang",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  },
+  {
+    "code": "PV11",
+    "name": "Vĩ",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  },
+  {
+    "code": "PV12",
+    "name": "Võ Văn Hào",
+    "role": "Phục vụ",
+    "hourly_rate": 22000,
+    "allowance": 20000
+  }
+]
