@@ -2,6 +2,7 @@
 // Cổng đăng nhập: chưa đăng nhập -> form; đã đăng nhập -> render children(me). need="manager" thì chặn nhân viên thường.
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export type Me = { id: string; emp_code: string; full_name: string; role: "employee" | "manager"; position: string | null };
@@ -179,6 +180,7 @@ function LoginForm({ notice }: { notice?: string }) {
 }
 
 export default function AuthGate({ need, children }: { need?: "manager"; children: (me: Me) => ReactNode }) {
+  const router = useRouter();
   const [state, setState] = useState<"loading" | "out" | "ready">("loading");
   const [me, setMe] = useState<Me | null>(null);
   const [notice, setNotice] = useState("");
@@ -223,13 +225,13 @@ export default function AuthGate({ need, children }: { need?: "manager"; childre
     const { data } = supabase.auth.onAuthStateChange(() => setTimeout(load, 0)); // setTimeout tránh gọi Supabase ngay trong callback
     return () => data.subscription.unsubscribe();
   }, [load]);
+  const managerDenied = need === "manager" && state === "ready" && me?.role !== "manager";
+  useEffect(() => {
+    if (managerDenied) router.replace("/");
+  }, [managerDenied, router]);
 
   if (state === "loading") return <main className="min-h-screen grid place-items-center text-gray-500">Đang tải…</main>;
   if (state === "out" || !me) return <LoginForm notice={notice} />;
-  if (need === "manager" && me.role !== "manager")
-    return (<main className="min-h-screen grid place-items-center p-6 text-center"><div>
-      <p className="mb-4">Trang này chỉ dành cho quản lý.</p>
-      <a href="/" className="text-orange-700 underline mr-4">Về trang nhân viên</a>
-      <button onClick={logout} className="text-gray-600 underline">Đăng xuất</button></div></main>);
+  if (managerDenied) return <main className="min-h-screen grid place-items-center text-gray-500">Đang chuyển về trang nhân viên…</main>;
   return <>{children(me)}</>;
 }

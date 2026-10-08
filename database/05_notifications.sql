@@ -37,8 +37,8 @@ using (recipient_id = (select auth.uid()));
 drop policy if exists notifications_update_read_own on public.notifications;
 create policy notifications_update_read_own
 on public.notifications for update to authenticated
-using (recipient_id = (select auth.uid()))
-with check (recipient_id = (select auth.uid()));
+using (recipient_id = (select auth.uid()) and is_read = false)
+with check (recipient_id = (select auth.uid()) and is_read = true);
 
 revoke all on public.notifications from public, anon, authenticated;
 grant select on public.notifications to authenticated;

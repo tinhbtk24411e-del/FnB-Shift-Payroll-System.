@@ -29,7 +29,7 @@ const shiftHours = (row: PayrollDay) =>
 const shiftPay = (row: PayrollDay) =>
   shiftHours(row) * row.hourly_rate + (row.check_in_1 && row.check_out_1 ? row.allowance_per_shift : 0);
 
-export default function PayrollAdmin() {
+export default function PayrollAdmin({ approvalRequest }: { approvalRequest: number }) {
   const { toast, node } = useToast();
   const now = new Date();
   const [view, setView] = useState<ManagerView>("approve");
@@ -140,6 +140,9 @@ export default function PayrollAdmin() {
   useEffect(() => {
     if (view === "overview") loadSummary();
   }, [loadSummary, view]);
+  useEffect(() => {
+    if (approvalRequest > 0) setView("approve");
+  }, [approvalRequest]);
 
   useEffect(() => {
     const channel = supabase.channel("admin-payroll-live")

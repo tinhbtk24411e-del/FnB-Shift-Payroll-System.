@@ -6,6 +6,9 @@
 - [ ] Tạo manager đầu tiên
 - [ ] Kiểm tra RLS
 - [ ] Kiểm tra `v_payroll_days`
+- [ ] Chạy `database/05_notifications.sql` trên DB TEST trước khi production
+- [ ] Xác nhận `public.notifications` thuộc publication `supabase_realtime`
+- [ ] Thử RLS: tài khoản không đọc được notification của user khác
 
 ## API
 - [ ] Tạo `api/.env`
@@ -18,6 +21,9 @@
 - [ ] `npm run typecheck`
 - [ ] `npm run build`
 - [ ] Test `/` và `/admin`
+- [ ] PC01 gửi ca pending → QL01 nhận badge/thông báo Realtime
+- [ ] QL01 đánh dấu thông báo đã đọc và mở màn duyệt ca
+- [ ] PC01 truy cập `/admin` → được chuyển về trang nhân viên
 
 ## Agent
 - [ ] Ping máy chấm công

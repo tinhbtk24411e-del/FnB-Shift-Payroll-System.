@@ -1,12 +1,14 @@
 "use client";
 import { useState } from "react";
 import AuthGate, { logout } from "@/AuthGate";
+import NotificationBell from "@/components/NotificationBell";
 import PayrollAdmin from "@/PayrollAdmin";
 import Staff from "@/Staff";
 
 // Trang quản lý: chỉ role 'manager' mới thấy khu vực này.
 export default function AdminPage() {
   const [tab, setTab] = useState<"pay" | "staff">("pay");
+  const [approvalRequest, setApprovalRequest] = useState(0);
   return (
     <AuthGate need="manager">{(me) => (
       <div className="min-h-screen bg-[#f3f4f6]">
@@ -20,12 +22,16 @@ export default function AdminPage() {
               <button key={key} type="button" onClick={() => setTab(key)} className={`rounded-lg px-3 py-2 text-[11px] font-semibold transition ${tab === key ? "bg-white/15 text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"}`}>{label}</button>
             ))}
             <div className="flex w-full items-center justify-between border-t border-white/10 pt-2 sm:ml-2 sm:w-auto sm:justify-end sm:border-0 sm:pt-0">
-              <span className="truncate text-xs font-medium sm:max-w-40">{me.full_name} <span className="text-slate-400">· Quản lý</span></span>
-              <button onClick={logout} className="ml-3 rounded-lg px-2 py-1 text-[11px] text-slate-300 hover:bg-white/10 hover:text-white">Đăng xuất</button>
+              <NotificationBell recipientId={me.id} onOpenApprovals={() => {
+                setTab("pay");
+                setApprovalRequest((request) => request + 1);
+              }} />
+              <span className="ml-3 truncate text-xs font-medium sm:max-w-40">{me.full_name} <span className="text-slate-400">· Quản lý</span></span>
+              <button onClick={logout} className="ml-2 rounded-lg px-2 py-1 text-[11px] text-slate-300 hover:bg-white/10 hover:text-white">Đăng xuất</button>
             </div>
           </div>
         </header>
-        {tab === "pay" ? <PayrollAdmin /> : <Staff />}
+        {tab === "pay" ? <PayrollAdmin approvalRequest={approvalRequest} /> : <Staff />}
       </div>)}
     </AuthGate>
   );
