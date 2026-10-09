@@ -44,7 +44,7 @@ export default function Staff() {
     return `API trả lỗi ${status}${statusText ? ` (${statusText})` : ""}, không có thông tin chi tiết.`;
   }
   async function api(path: string, body: unknown) {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_PAYROLL_API}${path}`, { method: "POST",
+    const res = await fetch(`/api${path}`, { method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${await token()}` }, body: JSON.stringify(body) });
     if (!res.ok) {
       const responseBody: unknown = await res.json().catch(() => null);

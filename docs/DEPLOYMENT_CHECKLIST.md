@@ -19,9 +19,13 @@
 
 ## Web
 - [ ] Tạo `web/.env.local`
+- [ ] Cấu hình `SUPABASE_SERVICE_KEY` dưới dạng server-only Environment Variable trên Vercel; tuyệt đối không dùng tiền tố `NEXT_PUBLIC_`
+- [ ] Redeploy web sau khi thêm `SUPABASE_SERVICE_KEY`; API quản lý nhân viên chạy cùng domain Vercel
 - [ ] `npm run typecheck`
 - [ ] `npm run build`
 - [ ] Test `/` và `/admin`
+- [ ] Quản lý tạo nhân viên qua tab **Nhân viên**; tài khoản Auth, hồ sơ và lương giờ/phụ cấp đều được lưu
+- [ ] Nhân viên đăng nhập bằng mã NV + mật khẩu đã tạo
 - [ ] PC01 gửi ca pending → QL01 nhận badge/thông báo Realtime
 - [ ] QL01 đánh dấu thông báo đã đọc và mở màn duyệt ca
 - [ ] PC01 truy cập `/admin` → được chuyển về trang nhân viên
