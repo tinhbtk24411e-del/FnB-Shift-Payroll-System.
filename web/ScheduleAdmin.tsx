@@ -40,6 +40,7 @@ export default function ScheduleAdmin() {
   const [shifts, setShifts] = useState<ScheduleShift[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [busyId, setBusyId] = useState<string | number | null>(null);
   const [editingShiftId, setEditingShiftId] = useState<number | null>(null);
   const [editStart, setEditStart] = useState("");
@@ -105,6 +106,33 @@ export default function ScheduleAdmin() {
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [loadSchedule]);
+
+  async function exportSchedule() {
+    setExporting(true);
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error || !session) throw new Error("Không xác minh được phiên đăng nhập quản lý.");
+      const response = await fetch(`/api/admin/schedule/export?weekStart=${startDate}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) {
+        const details: { detail?: string } | null = await response.json().catch(() => null);
+        throw new Error(details?.detail ?? response.statusText);
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const link = Object.assign(document.createElement("a"), {
+        href: url,
+        download: `lich-lam-${startDate}.xlsx`,
+      });
+      link.click();
+      URL.revokeObjectURL(url);
+      toast("ok", "Đã xuất lịch làm tuần");
+    } catch (error) {
+      toast("err", "Xuất lịch làm thất bại: " + (error instanceof Error ? error.message : "Lỗi không xác định"));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   function moveWeek(offset: number) {
     const nextMonday = new Date(monday);
@@ -251,6 +279,9 @@ export default function ScheduleAdmin() {
             </div>
             <button type="button" onClick={loadSchedule} disabled={loading} className="h-9 rounded-lg border border-slate-200 px-3 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
               {loading ? "Đang tải…" : "Làm mới"}
+            </button>
+            <button type="button" onClick={exportSchedule} disabled={exporting} className="h-9 rounded-lg bg-orange-600 px-3 text-[11px] font-bold text-white hover:bg-orange-700 disabled:opacity-50">
+              {exporting ? "Đang xuất…" : "Xuất lịch Excel"}
             </button>
           </div>
           <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-semibold">

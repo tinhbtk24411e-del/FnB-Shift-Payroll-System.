@@ -25,6 +25,7 @@
 - [ ] `npm run build`
 - [ ] Test `/` và `/admin`
 - [ ] Cấp quyền thông báo hệ thống trên thiết bị; thử nhận thông báo khi chuyển sang tab khác
+- [ ] Quản lý xuất lịch Excel tại tab **Xếp lịch**; kiểm tra cả chi tiết ca và tổng quan tuần
 - [ ] Quản lý xuất Excel tại tab **Quản lý lương**; kiểm tra giờ công, lương, NOTE và tổng thu nhập
 - [ ] Quản lý tạo nhân viên qua tab **Nhân viên**; tài khoản Auth, hồ sơ và lương giờ/phụ cấp đều được lưu
 - [ ] Nhân viên đăng nhập bằng mã NV + mật khẩu đã tạo
