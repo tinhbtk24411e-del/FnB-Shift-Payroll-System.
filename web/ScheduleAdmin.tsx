@@ -41,6 +41,9 @@ export default function ScheduleAdmin() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | number | null>(null);
+  const [editingShiftId, setEditingShiftId] = useState<number | null>(null);
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
 
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, index) => {
@@ -129,6 +132,46 @@ export default function ScheduleAdmin() {
       return;
     }
     toast("ok", `Đã xếp ca cho ${shift.users?.full_name ?? "nhân viên"}`);
+    await loadSchedule();
+  }
+
+  function beginEditingShift(shift: ScheduleShift) {
+    setEditingShiftId(shift.id);
+    setEditStart(shift.check_in_1?.slice(0, 5) ?? "");
+    setEditEnd(shift.check_out_1?.slice(0, 5) ?? "");
+  }
+
+  async function saveShiftHours(shift: ScheduleShift) {
+    if (!editStart || !editEnd || editStart === editEnd) {
+      toast("err", "Vui lòng chọn giờ bắt đầu và giờ kết thúc khác nhau.");
+      return;
+    }
+
+    setBusyId(shift.id);
+    const { data, error } = await supabase.from("shifts")
+      .update({
+        check_in_1: editStart,
+        check_out_1: editEnd,
+        status: "approved",
+      })
+      .eq("id", shift.id)
+      .eq("status", shift.status)
+      .select("id")
+      .maybeSingle();
+    setBusyId(null);
+    if (error) {
+      toast("err", `Không thể cập nhật giờ làm: ${error.message}`);
+      return;
+    }
+    if (!data) {
+      toast("info", "Ca làm đã thay đổi ở nơi khác. Hãy tải lại lịch trước khi chỉnh sửa.");
+      setEditingShiftId(null);
+      await loadSchedule();
+      return;
+    }
+
+    toast("ok", shift.status === "pending" ? "Đã cập nhật giờ và xếp ca thành công" : "Đã cập nhật giờ làm");
+    setEditingShiftId(null);
     await loadSchedule();
   }
 
@@ -323,15 +366,44 @@ export default function ScheduleAdmin() {
                           <p className="truncate text-xs font-bold text-slate-800">{shift.users?.full_name ?? "Nhân viên"}</p>
                           <p className="mt-0.5 text-[10px] text-slate-500">{shift.users?.emp_code ?? "—"} · {shift.users?.position ?? "Chưa cập nhật vị trí"} · {shift.check_in_1?.slice(0, 5) ?? "--:--"}–{shift.check_out_1?.slice(0, 5) ?? "--:--"}</p>
                         </div>
-                        {shift.status === "pending" ? (
-                          <button type="button" disabled={busyId === shift.id} onClick={() => approveShift(shift)}
-                            className="rounded-lg bg-orange-600 px-3 py-2 text-[10px] font-bold text-white hover:bg-orange-700 disabled:opacity-50">
-                            {busyId === shift.id ? "Đang xếp…" : "Xếp ca"}
-                          </button>
+                        {editingShiftId === shift.id ? (
+                          <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
+                            <label className="text-[9px] font-semibold text-slate-500">Bắt đầu
+                              <input type="time" value={editStart} onChange={(event) => setEditStart(event.target.value)}
+                                className="mt-1 block h-9 rounded-lg border border-slate-200 px-2 text-xs text-slate-800" />
+                            </label>
+                            <label className="text-[9px] font-semibold text-slate-500">Kết thúc
+                              <input type="time" value={editEnd} onChange={(event) => setEditEnd(event.target.value)}
+                                className="mt-1 block h-9 rounded-lg border border-slate-200 px-2 text-xs text-slate-800" />
+                            </label>
+                            <button type="button" disabled={busyId === shift.id} onClick={() => saveShiftHours(shift)}
+                              className="h-9 rounded-lg bg-orange-600 px-3 text-[10px] font-bold text-white hover:bg-orange-700 disabled:opacity-50">
+                              {busyId === shift.id ? "Đang lưu…" : shift.status === "pending" ? "Lưu & xếp ca" : "Lưu giờ"}
+                            </button>
+                            <button type="button" disabled={busyId === shift.id} onClick={() => setEditingShiftId(null)}
+                              className="h-9 rounded-lg border border-slate-200 px-3 text-[10px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                              Hủy
+                            </button>
+                          </div>
                         ) : (
-                          <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${shift.status === "approved" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
-                            {shift.status === "approved" ? "Đã xếp ca" : "Đã từ chối"}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            {shift.status === "pending" ? (
+                              <button type="button" disabled={busyId === shift.id} onClick={() => approveShift(shift)}
+                                className="rounded-lg bg-orange-600 px-3 py-2 text-[10px] font-bold text-white hover:bg-orange-700 disabled:opacity-50">
+                                {busyId === shift.id ? "Đang xếp…" : "Xếp ca"}
+                              </button>
+                            ) : (
+                              <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${shift.status === "approved" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                                {shift.status === "approved" ? "Đã xếp ca" : "Đã từ chối"}
+                              </span>
+                            )}
+                            {shift.status !== "rejected" && (
+                              <button type="button" disabled={busyId === shift.id} onClick={() => beginEditingShift(shift)}
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                                Chỉnh giờ
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     ))}</div> : <p className="rounded-lg bg-slate-50 px-3 py-3 text-[10px] text-slate-400">Chưa có nhân viên đăng ký {PERIODS[period].label.toLocaleLowerCase("vi")}.</p>}
