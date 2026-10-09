@@ -11,7 +11,8 @@ Next.js PWA
    │                                  ├─ daily_notes
    │                                  └─ v_payroll_days
    │
-   ├── FastAPI ── openpyxl ── Excel
+   ├── Next.js API (/api/admin/payroll/export) ── ExcelJS ── Excel
+   ├── FastAPI ── admin API / legacy export
    │
    └── Hardware Agent ── LAN ── ZKTeco/Ronald Jack
 ```

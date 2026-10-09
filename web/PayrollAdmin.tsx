@@ -222,13 +222,11 @@ export default function PayrollAdmin({ approvalRequest }: { approvalRequest: num
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error || !session) throw new Error("Không xác minh được phiên đăng nhập quản lý.");
-      const api = process.env.NEXT_PUBLIC_PAYROLL_API;
-      if (!api) throw new Error("Chưa cấu hình NEXT_PUBLIC_PAYROLL_API.");
-      const response = await fetch(`${api}/export-payroll?month=${month}&year=${year}`, {
+      const response = await fetch(`/api/admin/payroll/export?month=${month}&year=${year}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!response.ok) {
-        const details = await response.json().catch(() => null);
+        const details: { detail?: string } | null = await response.json().catch(() => null);
         throw new Error(details?.detail ?? response.statusText);
       }
       const url = URL.createObjectURL(await response.blob());

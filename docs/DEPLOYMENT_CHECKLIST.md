@@ -24,6 +24,7 @@
 - [ ] `npm run typecheck`
 - [ ] `npm run build`
 - [ ] Test `/` và `/admin`
+- [ ] Quản lý xuất Excel tại tab **Quản lý lương**; kiểm tra giờ công, lương, NOTE và tổng thu nhập
 - [ ] Quản lý tạo nhân viên qua tab **Nhân viên**; tài khoản Auth, hồ sơ và lương giờ/phụ cấp đều được lưu
 - [ ] Nhân viên đăng nhập bằng mã NV + mật khẩu đã tạo
 - [ ] PC01 gửi ca pending → QL01 nhận badge/thông báo Realtime
