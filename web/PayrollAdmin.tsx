@@ -7,7 +7,7 @@ import { useToast } from "./Toast";
 
 type ShiftJ = Shift & { users: { emp_code: string; full_name: string } };
 type LeaveJ = LeaveRequest & { users: { emp_code: string; full_name: string } };
-type NoteDraft = { text: string; amount: string };
+type NoteDraft = { text: string; amount: string; adjustmentKind: "deduct" | "add" };
 type Saved = "saving" | "saved" | "error";
 type ManagerView = "approve" | "detail" | "overview";
 type PayrollSummary = {
@@ -94,7 +94,8 @@ export default function PayrollAdmin({ approvalRequest }: { approvalRequest: num
       nextDays[row.work_date] = row;
       nextDrafts[row.work_date] = {
         text: row.note_text ?? "",
-        amount: row.adjustment_amount ? String(row.adjustment_amount) : "",
+        amount: row.adjustment_amount ? String(Math.abs(row.adjustment_amount)) : "",
+        adjustmentKind: row.adjustment_amount < 0 ? "add" : "deduct",
       };
     });
     setDays(nextDays);
@@ -199,12 +200,13 @@ export default function PayrollAdmin({ approvalRequest }: { approvalRequest: num
 
   function editNote(date: string, patch: Partial<NoteDraft>) {
     if (!empId) return;
-    const next = { ...(drafts[date] ?? { text: "", amount: "" }), ...patch };
+    const next = { ...(drafts[date] ?? { text: "", amount: "", adjustmentKind: "deduct" as const }), ...patch };
     setDrafts((previous) => ({ ...previous, [date]: next }));
     setSaved((previous) => ({ ...previous, [date]: "saving" }));
     clearTimeout(timers.current[date]);
     timers.current[date] = setTimeout(async () => {
-      const amount = Number(next.amount.replace(/[.,\s]/g, "")) || 0;
+      const magnitude = Number(next.amount.replace(/[^\d]/g, "")) || 0;
+      const amount = next.adjustmentKind === "add" ? -magnitude : magnitude;
       const result = !next.text.trim() && !amount
         ? await supabase.from("daily_notes").delete().eq("user_id", empId).eq("note_date", date)
         : await supabase.from("daily_notes").upsert(
@@ -464,20 +466,26 @@ export default function PayrollAdmin({ approvalRequest }: { approvalRequest: num
                   <thead className="bg-slate-50"><tr><th className={th}>Ngày</th><th className={th}>Vào – Ra</th><th className={`${th} text-right`}>Giờ</th><th className={th}>NOTE (chỉ ghi chú)</th><th className={`${th} w-32`}>Điều chỉnh (+ trừ)</th><th className={th}>Trạng thái</th></tr></thead>
                   <tbody>{monthDays.map((date) => {
                     const row = days[date];
-                    const draft = drafts[date] ?? { text: "", amount: "" };
+                    const draft = drafts[date] ?? { text: "", amount: "", adjustmentKind: "deduct" as const };
                     const hours = row ? shiftHours(row) : 0;
                     return <tr key={date} className="border-t border-slate-100 align-top">
                       <td className="whitespace-nowrap px-3 py-2.5 font-semibold">{date.slice(8)}/{date.slice(5, 7)}</td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-slate-600">{row?.check_in_1 ? `${hm(row.check_in_1)} – ${hm(row.check_out_1)}${row.check_in_2 ? ` · ${hm(row.check_in_2)} – ${hm(row.check_out_2)}` : ""}` : "—"}</td>
                       <td className="px-3 py-2.5 text-right font-semibold">{hours ? hours.toFixed(2) : "—"}</td>
                       <td className="min-w-48 p-2"><input value={draft.text} onChange={(event) => editNote(date, { text: event.target.value })} className="h-8 w-full rounded-lg border border-slate-200 px-2 text-[11px] outline-none focus:border-orange-400" placeholder="Thêm NOTE…" /></td>
-                      <td className="p-2"><input aria-label={`Điều chỉnh ngày ${date}; số dương để trừ, số âm để cộng`} title="Số dương = trừ lương; số âm = cộng/bù" inputMode="numeric" value={draft.amount} onChange={(event) => editNote(date, { amount: event.target.value })} className="h-8 w-full rounded-lg border border-slate-200 px-2 text-right text-[11px] outline-none focus:border-orange-400" placeholder="VNĐ (+ trừ)" /></td>
+                      <td className="min-w-40 p-2">
+                        <div className="mb-1 grid grid-cols-2 gap-1" role="group" aria-label={`Loại điều chỉnh ngày ${date}`}>
+                          <button type="button" aria-pressed={draft.adjustmentKind === "deduct"} onClick={() => editNote(date, { adjustmentKind: "deduct" })} className={`h-7 rounded-md text-[10px] font-semibold ${draft.adjustmentKind === "deduct" ? "bg-rose-100 text-rose-700 ring-1 ring-rose-300" : "bg-slate-50 text-slate-500"}`}>Trừ</button>
+                          <button type="button" aria-pressed={draft.adjustmentKind === "add"} onClick={() => editNote(date, { adjustmentKind: "add" })} className={`h-7 rounded-md text-[10px] font-semibold ${draft.adjustmentKind === "add" ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300" : "bg-slate-50 text-slate-500"}`}>Cộng</button>
+                        </div>
+                        <input aria-label={`Số tiền ${draft.adjustmentKind === "add" ? "cộng" : "trừ"} ngày ${date}`} inputMode="numeric" value={draft.amount} onChange={(event) => editNote(date, { amount: event.target.value.replace(/[^\d]/g, "") })} className="h-8 w-full rounded-lg border border-slate-200 px-2 text-right text-[11px] outline-none focus:border-orange-400" placeholder="Số tiền (VNĐ)" />
+                      </td>
                       <td className="px-3 py-2.5 text-[10px]">{saved[date] === "saving" ? <span className="text-slate-400">Đang lưu…</span> : saved[date] === "saved" ? <span className="text-emerald-700">Đã lưu</span> : saved[date] === "error" ? <span className="text-rose-600">Lỗi lưu</span> : row ? <span className="text-blue-700">Đã chấm công</span> : <span className="text-slate-300">—</span>}</td>
                     </tr>;
                   })}</tbody>
                 </table>
               </div>
-              <p className="border-t border-slate-100 px-4 py-3 text-[10px] text-slate-500">Quy ước điều chỉnh: số dương là trừ, số âm là cộng/bù.</p>
+              <p className="border-t border-slate-100 px-4 py-3 text-[10px] text-slate-500">Chọn Trừ hoặc Cộng, sau đó nhập số tiền dương. Hệ thống tự áp dụng đúng dấu vào bảng lương.</p>
             </section>
           </div>
         ) : (
