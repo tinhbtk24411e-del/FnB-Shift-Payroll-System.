@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 const MONTHS = ["Hai", "Ba", "Tư", "Năm", "Sáu", "Bảy", "CN"];
 const HEADERS = [
   "Mã NV", "Tên nhân viên", "Chức vụ", "Ngày", "Thứ", "Vào 1", "Ra 1", "Vào 2", "Ra 2",
-  "GIỜ CÔNG", "PHỤ CẤP", "LƯƠNG GIỜ", "LƯƠNG NGÀY", "LƯƠNG THÁNG",
+  "GIỜ CÔNG", "PHỤ CẤP CƠM", "LƯƠNG GIỜ", "LƯƠNG NGÀY", "LƯƠNG THÁNG",
   "TỔNG GIỜ\nCÔNG THÁNG", "NOTE", "TỔNG THU NHẬP",
 ];
 const WIDTHS = [10, 24, 14, 13, 7, 9, 9, 9, 9, 11, 13, 13, 15, 16, 16, 34, 17];
@@ -23,10 +23,7 @@ const ORANGE = "FFF4B183";
 const PEACH = "FFFCE4D6";
 const moneyFormat = '#,##0;[Red](#,##0);-';
 
-type EmployeePayroll = Pick<PayrollDay, "emp_code" | "full_name" | "position" | "hourly_rate"> & {
-  allowance: number;
-  days: PayrollDay[];
-};
+type EmployeePayroll = Pick<PayrollDay, "emp_code" | "full_name" | "position" | "hourly_rate"> & { days: PayrollDay[] };
 
 function excelDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
@@ -134,7 +131,7 @@ function createWorkbook(month: number, year: number, employees: EmployeePayroll[
       cells.getCell(10).value = {
         formula: `IF(AND(F${currentRow}<>"",G${currentRow}<>""),MOD(G${currentRow}-F${currentRow},1)*24,0)+IF(AND(H${currentRow}<>"",I${currentRow}<>""),MOD(I${currentRow}-H${currentRow},1)*24,0)`,
       };
-      cells.getCell(11).value = day.check_in_1 && day.check_out_1 ? employee.allowance : 0;
+      cells.getCell(11).value = { formula: `IF(J${currentRow}>=8,25000,0)` };
       cells.getCell(12).value = Number(day.hourly_rate);
       cells.getCell(13).value = { formula: `J${currentRow}*L${currentRow}+K${currentRow}` };
       cells.getCell(16).value = adjustmentNote(day.note_text, Number(day.adjustment_amount));
@@ -216,7 +213,6 @@ export async function GET(request: NextRequest) {
       full_name: row.full_name,
       position: row.position,
       hourly_rate: row.hourly_rate,
-      allowance: Number(row.allowance_per_shift),
       days: [],
     };
     employee.days.push(row);

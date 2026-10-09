@@ -39,6 +39,7 @@
 - [ ] Kiểm tra `attendance_logs`
 
 ## Payroll
+- [ ] Phụ cấp cơm 25.000đ khi tổng giờ chấm công trong ngày từ 8 giờ; dưới 8 giờ là 0đ
 - [ ] Ca 1
 - [ ] Ca gộp 2 cặp
 - [ ] NOTE dương

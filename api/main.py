@@ -20,7 +20,7 @@ from openpyxl.utils import get_column_letter
 
 THU = ["Hai", "Ba", "Tư", "Năm", "Sáu", "Bảy", "CN"]
 COLS = ["Mã NV", "Tên nhân viên", "Chức vụ", "Ngày", "Thứ", "Vào 1", "Ra 1", "Vào 2", "Ra 2",
-        "GIỜ CÔNG", "PHỤ CẤP", "LƯƠNG GIỜ", "LƯƠNG NGÀY", "LƯƠNG THÁNG",
+        "GIỜ CÔNG", "PHỤ CẤP CƠM", "LƯƠNG GIỜ", "LƯƠNG NGÀY", "LƯƠNG THÁNG",
         "TỔNG GIỜ CÔNG THÁNG", "NOTE", "TỔNG THU NHẬP", "SỐ TIỀN NOTE\n(dương = trừ, âm = cộng)"]
 WIDTHS = [9, 22, 12, 12, 6, 8, 8, 8, 8, 10, 11, 11, 13, 14, 14, 38, 15, 16]
 ORANGE = PatternFill("solid", fgColor="ED7D31")
@@ -31,7 +31,7 @@ MERGE_COLS = (1, 2, 3, 14, 15, 17)  # Mã NV, Tên, Chức vụ, Lương tháng,
 
 
 def build_workbook(start: date, end: date, employees: list[dict]) -> Workbook:
-    """employees: [{emp_code, full_name, position, hourly_rate, allowance,
+    """employees: [{emp_code, full_name, position, hourly_rate,
                     days: [{date, in1, out1, in2, out2, note, adjust}]}]"""
     wb = Workbook()
     ws = wb.active
@@ -60,7 +60,6 @@ def build_workbook(start: date, end: date, employees: list[dict]) -> Workbook:
         r0, r1 = r, r + len(days) - 1
         ws.cell(r0, 1, e["emp_code"]); ws.cell(r0, 2, e["full_name"]); ws.cell(r0, 3, e["position"])
         for d in days:
-            has_shift = bool(d.get("in1") and d.get("out1"))
             ws.cell(r, 4, d["date"]).number_format = "DD/MM/YYYY"
             ws.cell(r, 5, THU[d["date"].weekday()])
             for col, key in zip((6, 7, 8, 9), ("in1", "out1", "in2", "out2")):
@@ -68,7 +67,7 @@ def build_workbook(start: date, end: date, employees: list[dict]) -> Workbook:
             # GIỜ CÔNG = (Ra1-Vào1)+(Ra2-Vào2); MOD(...,1) xử lý ca qua đêm
             ws.cell(r, 10, f'=IF(AND(F{r}<>"",G{r}<>""),MOD(G{r}-F{r},1)*24,0)'
                            f'+IF(AND(H{r}<>"",I{r}<>""),MOD(I{r}-H{r},1)*24,0)')
-            ws.cell(r, 11, e["allowance"] if has_shift else 0)
+            ws.cell(r, 11, f'=IF(J{r}>=8,25000,0)')
             ws.cell(r, 12, e["hourly_rate"])
             ws.cell(r, 13, f"=J{r}*L{r}+K{r}")                      # LƯƠNG NGÀY
             ws.cell(r, 16, d.get("note"))
@@ -169,7 +168,7 @@ def export(month: int, year: int, authorization: str = Header(...)):
     for x in rows:
         e = emps.setdefault(x.emp_code, dict(
             emp_code=x.emp_code, full_name=x.full_name, position=x.position,
-            hourly_rate=int(x.hourly_rate), allowance=int(x.allowance_per_shift), days=[]))
+            hourly_rate=int(x.hourly_rate), days=[]))
         e["days"].append(dict(date=x.work_date, in1=x.check_in_1, out1=x.check_out_1,
                               in2=x.check_in_2, out2=x.check_out_2,
                               note=x.note_text, adjust=int(x.adjustment_amount)))

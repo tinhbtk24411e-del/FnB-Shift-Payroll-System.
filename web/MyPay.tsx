@@ -2,14 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { mealAllowance, payrollHours } from "@/lib/payroll";
 import type { PayrollDay } from "@/lib/types";
 
 type View = "attendance" | "pay";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const hm = (t: string | null) => (t ? t.slice(0, 5) : "");
-const mins = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
-const span = (a: string | null, b: string | null) => (a && b ? ((mins(b) - mins(a) + 1440) % 1440) / 60 : 0);
 const vnd = (n: number) => n.toLocaleString("vi-VN") + " đ";
 
 export default function MyPay({ view }: { view: View }) {
@@ -43,8 +42,8 @@ export default function MyPay({ view }: { view: View }) {
 
   const calc = useMemo(() => {
     const days = rows.map((r) => {
-      const h = span(r.check_in_1, r.check_out_1) + span(r.check_in_2, r.check_out_2);
-      const pay = h * r.hourly_rate + (r.check_in_1 && r.check_out_1 ? r.allowance_per_shift : 0);
+      const h = payrollHours(r);
+      const pay = h * r.hourly_rate + mealAllowance(h);
       return { r, h, pay };
     });
     const hours = days.reduce((s, d) => s + d.h, 0);
@@ -126,6 +125,7 @@ export default function MyPay({ view }: { view: View }) {
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-bold text-slate-800">{h ? `${h.toFixed(2)} giờ` : "—"}</p>
+                    {view === "pay" && <p className="mt-1 text-[9px] text-slate-500">Phụ cấp cơm: {vnd(mealAllowance(h))}</p>}
                     {view === "pay" && <p className="mt-1 text-[10px] font-semibold text-orange-700">{vnd(Math.round(pay))}</p>}
                   </div>
                 </div>

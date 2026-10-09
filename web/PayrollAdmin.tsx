@@ -2,6 +2,7 @@
 // Trang quản lý: duyệt ca, xem phiếu lương từng người và tổng hợp kỳ lương.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { payrollDayPay, payrollHours } from "@/lib/payroll";
 import type { Employee, LeaveRequest, PayrollDay, Shift, Status } from "@/lib/types";
 import { useToast } from "./Toast";
 
@@ -21,7 +22,8 @@ type PayrollSummary = {
 
 const hm = (t: string | null) => (t ? t.slice(0, 5) : "");
 const mins = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
-const span = (a: string | null, b: string | null) => (a && b ? ((mins(b) - mins(a) + 1440) % 1440) / 60 : 0);
+const span = (start: string | null, end: string | null) =>
+  start && end ? ((mins(end) - mins(start) + 1440) % 1440) / 60 : 0;
 const shiftKind = (start: string | null, end: string | null) => {
   if (hm(start) === "06:00" && hm(end) === "14:00") return "Ca sáng";
   if (hm(start) === "14:00" && hm(end) === "23:00") return "Ca chiều";
@@ -29,10 +31,8 @@ const shiftKind = (start: string | null, end: string | null) => {
 };
 const money = (n: number) => Math.round(n).toLocaleString("vi-VN") + " đ";
 const pad = (n: number) => String(n).padStart(2, "0");
-const shiftHours = (row: PayrollDay) =>
-  span(row.check_in_1, row.check_out_1) + span(row.check_in_2, row.check_out_2);
-const shiftPay = (row: PayrollDay) =>
-  shiftHours(row) * row.hourly_rate + (row.check_in_1 && row.check_out_1 ? row.allowance_per_shift : 0);
+const shiftHours = payrollHours;
+const shiftPay = payrollDayPay;
 
 export default function PayrollAdmin({ approvalRequest }: { approvalRequest: number }) {
   const { toast, node } = useToast();
