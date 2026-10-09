@@ -461,7 +461,7 @@ export default function PayrollAdmin({ approvalRequest }: { approvalRequest: num
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[720px] border-collapse text-xs">
-                  <thead className="bg-slate-50"><tr><th className={th}>Ngày</th><th className={th}>Vào – Ra</th><th className={`${th} text-right`}>Giờ</th><th className={th}>NOTE</th><th className={`${th} w-32`}>Điều chỉnh</th><th className={th}>Trạng thái</th></tr></thead>
+                  <thead className="bg-slate-50"><tr><th className={th}>Ngày</th><th className={th}>Vào – Ra</th><th className={`${th} text-right`}>Giờ</th><th className={th}>NOTE (chỉ ghi chú)</th><th className={`${th} w-32`}>Điều chỉnh (+ trừ)</th><th className={th}>Trạng thái</th></tr></thead>
                   <tbody>{monthDays.map((date) => {
                     const row = days[date];
                     const draft = drafts[date] ?? { text: "", amount: "" };
@@ -471,7 +471,7 @@ export default function PayrollAdmin({ approvalRequest }: { approvalRequest: num
                       <td className="whitespace-nowrap px-3 py-2.5 text-slate-600">{row?.check_in_1 ? `${hm(row.check_in_1)} – ${hm(row.check_out_1)}${row.check_in_2 ? ` · ${hm(row.check_in_2)} – ${hm(row.check_out_2)}` : ""}` : "—"}</td>
                       <td className="px-3 py-2.5 text-right font-semibold">{hours ? hours.toFixed(2) : "—"}</td>
                       <td className="min-w-48 p-2"><input value={draft.text} onChange={(event) => editNote(date, { text: event.target.value })} className="h-8 w-full rounded-lg border border-slate-200 px-2 text-[11px] outline-none focus:border-orange-400" placeholder="Thêm NOTE…" /></td>
-                      <td className="p-2"><input inputMode="numeric" value={draft.amount} onChange={(event) => editNote(date, { amount: event.target.value })} className="h-8 w-full rounded-lg border border-slate-200 px-2 text-right text-[11px] outline-none focus:border-orange-400" placeholder="0" /></td>
+                      <td className="p-2"><input aria-label={`Điều chỉnh ngày ${date}; số dương để trừ, số âm để cộng`} title="Số dương = trừ lương; số âm = cộng/bù" inputMode="numeric" value={draft.amount} onChange={(event) => editNote(date, { amount: event.target.value })} className="h-8 w-full rounded-lg border border-slate-200 px-2 text-right text-[11px] outline-none focus:border-orange-400" placeholder="VNĐ (+ trừ)" /></td>
                       <td className="px-3 py-2.5 text-[10px]">{saved[date] === "saving" ? <span className="text-slate-400">Đang lưu…</span> : saved[date] === "saved" ? <span className="text-emerald-700">Đã lưu</span> : saved[date] === "error" ? <span className="text-rose-600">Lỗi lưu</span> : row ? <span className="text-blue-700">Đã chấm công</span> : <span className="text-slate-300">—</span>}</td>
                     </tr>;
                   })}</tbody>
