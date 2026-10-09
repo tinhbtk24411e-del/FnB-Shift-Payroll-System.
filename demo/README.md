@@ -36,6 +36,9 @@ python seed_demo.py
 Script lấy các giờ chấm công mẫu từ `web/data/demo_attendance_october_2026.json`,
 đổi ngày sang tháng hiện tại rồi nạp vào Supabase. Các file nhân viên, NOTE và
 workflow chờ duyệt được đọc từ `demo/data/`.
+Riêng tài khoản PC01 có giờ mẫu được cấu hình riêng trong
+`demo/data/pc01_attendance.json` cho ngày 08, 09, 10, 12, 13 và 15 của tháng hiện tại
+(ca sáng, ca chiều và ca gãy).
 Lần nạp thông thường sẽ dừng nếu database đã có mã nhân viên demo trùng; không chạy `--force`
 trên database thật.
 
@@ -44,6 +47,10 @@ Nếu muốn tạo lại dữ liệu demo của tháng hiện tại:
 ```bash
 python seed_demo.py --force
 ```
+
+Sau khi cập nhật giờ PC01, chạy lệnh trên từ thư mục `demo` để cập nhật lại dữ liệu
+trong database demo. Đăng nhập `PC01 / Demo123!`, rồi mở lại mục **Bảng công** hoặc
+**Lương** để xem giờ và tiền công mẫu.
 
 ### Tài khoản demo
 

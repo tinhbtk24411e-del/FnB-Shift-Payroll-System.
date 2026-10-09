@@ -1,0 +1,50 @@
+[
+  {
+    "day": 8,
+    "check_in_1": "06:00:00",
+    "check_out_1": "14:00:00",
+    "check_in_2": null,
+    "check_out_2": null,
+    "shift_name": "CA_SANG"
+  },
+  {
+    "day": 9,
+    "check_in_1": "14:00:00",
+    "check_out_1": "23:00:00",
+    "check_in_2": null,
+    "check_out_2": null,
+    "shift_name": "CA_CHIEU"
+  },
+  {
+    "day": 10,
+    "check_in_1": "08:00:00",
+    "check_out_1": "12:00:00",
+    "check_in_2": "16:00:00",
+    "check_out_2": "20:00:00",
+    "shift_name": "CA_GAY"
+  },
+  {
+    "day": 12,
+    "check_in_1": "06:00:00",
+    "check_out_1": "14:00:00",
+    "check_in_2": null,
+    "check_out_2": null,
+    "shift_name": "CA_SANG"
+  },
+  {
+    "day": 13,
+    "check_in_1": "14:00:00",
+    "check_out_1": "23:00:00",
+    "check_in_2": null,
+    "check_out_2": null,
+    "shift_name": "CA_CHIEU"
+  },
+  {
+    "day": 15,
+    "check_in_1": "09:00:00",
+    "check_out_1": "13:00:00",
+    "check_in_2": "17:00:00",
+    "check_out_2": "21:00:00",
+    "shift_name": "CA_GAY"
+  }
+]

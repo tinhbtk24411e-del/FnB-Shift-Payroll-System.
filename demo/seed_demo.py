@@ -98,6 +98,27 @@ def load_json(name: str):
     return rows
 
 
+def pc01_demo_attendance():
+    rows = load_json("pc01_attendance.json")
+    staff = next(item for item in load_json("staff.json") if item["code"] == "PC01")
+    attendance = []
+    for row in rows:
+        work_date = date(TODAY.year, TODAY.month, row["day"]).isoformat()
+        attendance.append({
+            "emp_code": "PC01",
+            "full_name": staff["name"],
+            "role": staff["role"],
+            "work_date": work_date,
+            "check_in_1": row["check_in_1"],
+            "check_out_1": row["check_out_1"],
+            "check_in_2": row["check_in_2"],
+            "check_out_2": row["check_out_2"],
+            "shift_name": row["shift_name"],
+            "source_device": DEMO_DEVICE,
+        })
+    return attendance
+
+
 def auth_users_map(sb):
     try:
         resp = sb.auth.admin.list_users(page=1, per_page=100)
@@ -122,6 +143,13 @@ def ensure_auth_user(sb, code: str, password: str, existing):
 def main(force: bool = False):
     staff = load_json("staff.json")
     attendance = load_json("attendance_october_2026.json")
+    pc01_attendance = pc01_demo_attendance()
+    pc01_dates = {row["work_date"] for row in pc01_attendance}
+    attendance = [
+        row for row in attendance
+        if row["emp_code"] != "PC01" or row["work_date"] not in pc01_dates
+    ]
+    attendance.extend(pc01_attendance)
     notes = load_json("daily_notes.json")
     pending = load_json("pending_workflows.json")
     codes = [x["code"] for x in staff]
