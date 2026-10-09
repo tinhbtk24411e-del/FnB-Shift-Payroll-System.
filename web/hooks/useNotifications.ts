@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { showBrowserNotification } from "@/lib/browser-notifications";
 import type { Notification } from "@/lib/types";
 import { useToast } from "@/Toast";
 
@@ -55,6 +56,9 @@ export function useNotifications(recipientId: string) {
         ].slice(0, 30));
         setError("");
         toast("info", `${notification.title}: ${notification.body}`);
+        void showBrowserNotification(notification.title, notification.body).catch((error: unknown) => {
+          console.error("Could not display browser notification:", error);
+        });
         void loadNotifications();
       })
       .subscribe((status, subscriptionError) => {

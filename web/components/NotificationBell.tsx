@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import type { Notification } from "@/lib/types";
+import BrowserNotificationButton from "./BrowserNotificationButton";
 
 function notificationDate(value: string) {
   return new Date(value).toLocaleString("vi-VN", {
@@ -92,6 +93,10 @@ export default function NotificationBell({
           <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
             <div><h2 className="text-sm font-extrabold">Thông báo</h2><p className="mt-0.5 text-[10px] text-slate-400">{unreadCount} chưa đọc</p></div>
             <button type="button" onClick={readAll} disabled={!unreadCount} className="text-[10px] font-bold text-orange-700 hover:underline disabled:cursor-not-allowed disabled:text-slate-300">Đọc tất cả</button>
+          </div>
+          <div className="border-b border-slate-100 p-3">
+            <BrowserNotificationButton />
+            <p className="mt-1.5 text-[9px] leading-4 text-slate-400">Thông báo hệ thống sẽ hiện khi bạn đang ở tab khác hoặc ứng dụng chạy nền.</p>
           </div>
           {error && (
             <div role="alert" className="m-3 rounded-lg border border-rose-100 bg-rose-50 p-2.5 text-[10px] leading-4 text-rose-700">

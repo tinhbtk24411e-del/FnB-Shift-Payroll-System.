@@ -2,6 +2,7 @@
 import { useState } from "react";
 import AuthGate, { logout } from "@/AuthGate";
 import NotificationBell from "@/components/NotificationBell";
+import BrowserNotificationButton from "@/components/BrowserNotificationButton";
 import PayrollAdmin from "@/PayrollAdmin";
 import ScheduleAdmin from "@/ScheduleAdmin";
 import Staff from "@/Staff";
@@ -27,6 +28,7 @@ export default function AdminPage() {
                 setTab("pay");
                 setApprovalRequest((request) => request + 1);
               }} />
+              <div className="ml-2"><BrowserNotificationButton compact /></div>
               <span className="ml-3 truncate text-xs font-medium sm:max-w-40">{me.full_name} <span className="text-slate-400">· Quản lý</span></span>
               <button onClick={logout} className="ml-2 rounded-lg px-2 py-1 text-[11px] text-slate-300 hover:bg-white/10 hover:text-white">Đăng xuất</button>
             </div>

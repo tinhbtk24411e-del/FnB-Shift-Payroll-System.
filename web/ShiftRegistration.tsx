@@ -2,7 +2,9 @@
 // Trang nhân viên: đăng ký ca, gửi đơn xin nghỉ và xem công/lương.
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
+import { showBrowserNotification } from "@/lib/browser-notifications";
 import { logout, type Me } from "./AuthGate";
+import BrowserNotificationButton from "./components/BrowserNotificationButton";
 import type { LeaveRequest, Shift, Status } from "@/lib/types";
 import { useToast } from "./Toast";
 import MyPay from "./MyPay";
@@ -130,13 +132,17 @@ export default function ShiftRegistration({ me }: { me: Me }) {
     }) => {
       const status = payload.new.status;
       if (status !== payload.old?.status && status !== "pending") {
-        toast(status === "approved" ? "ok" : "err", `${what} ${payload.new.work_date ?? payload.new.leave_date}: ${LABEL[status]}`);
+        const message = `${what} ${payload.new.work_date ?? payload.new.leave_date}: ${LABEL[status]}`;
+        toast(status === "approved" ? "ok" : "err", message);
+        void showBrowserNotification(status === "approved" ? "Đăng ký đã được duyệt" : "Đăng ký bị từ chối", message)
+          .catch((error: unknown) => console.error("Could not display browser notification:", error));
       }
       loadShifts();
       loadLeaves();
     };
     const channel = supabase.channel(`employee-updates-${me.id}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "shifts", filter: `user_id=eq.${me.id}` }, notify("Ca ngày"))
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "shifts", filter: `user_id=eq.${me.id}` }, notify("Ca ngày"))
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "leave_requests", filter: `user_id=eq.${me.id}` }, notify("Đơn nghỉ ngày"))
       .subscribe();
     return () => {
@@ -256,6 +262,7 @@ export default function ShiftRegistration({ me }: { me: Me }) {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <BrowserNotificationButton compact />
             <button type="button" onClick={() => setTab("leave")} aria-label={`${pendingCount} ca chờ duyệt; mở thông báo`} className="relative grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 hover:bg-orange-50">
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-[17px] w-[17px]"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
               {pendingCount > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-orange-500 ring-2 ring-white" />}
