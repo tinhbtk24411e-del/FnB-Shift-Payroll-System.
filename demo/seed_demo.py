@@ -1,4 +1,4 @@
-"""Seed demo F&B data vào Supabase để trình diễn khi chưa có máy chấm công.
+"""Seed demo F&B data cho tháng hiện tại để trình diễn khi chưa có máy chấm công.
 
 Nguồn dữ liệu attendance: web/data/demo_attendance_october_2026.json.
 Các dữ liệu demo khác: demo/data/*.json.
@@ -7,20 +7,21 @@ Tài khoản demo: mã NV @company.local, mật khẩu mặc định Demo123!
 Chạy lần đầu trên database demo trống:
     python seed_demo.py
 
-Chạy lại / làm mới toàn bộ dữ liệu demo tháng 10/2026:
+Chạy lại / làm mới dữ liệu demo của tháng hiện tại:
     python seed_demo.py --force
 
 Script cố ý KHÔNG xoá auth user thật. --force chỉ làm mới các bản ghi demo của
-tháng 10/2026 và cập nhật hồ sơ theo bộ nhân sự demo.
+tháng hiện tại và cập nhật hồ sơ theo bộ nhân sự demo.
 """
 from __future__ import annotations
 
 import argparse
 import base64
 import binascii
+import calendar
 import json
 import os
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -35,6 +36,24 @@ DEMO_DEVICE = "DEMO-ZK01"
 DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "Demo123!")
 TZ = "+07:00"
 ATTENDANCE_FILE = ROOT.parent / "web" / "data" / "demo_attendance_october_2026.json"
+TODAY = datetime.now().date()
+MONTH_START = TODAY.replace(day=1)
+MONTH_END = date(TODAY.year, TODAY.month, calendar.monthrange(TODAY.year, TODAY.month)[1])
+
+
+def current_month_date(value: str) -> str:
+    source = date.fromisoformat(value)
+    day = min(source.day, calendar.monthrange(TODAY.year, TODAY.month)[1])
+    return date(TODAY.year, TODAY.month, day).isoformat()
+
+
+def upcoming_demo_date(offset: int) -> str:
+    start = max(TODAY + timedelta(days=1), MONTH_START)
+    return min(start + timedelta(days=offset), MONTH_END).isoformat()
+
+
+def date_range() -> tuple[str, str]:
+    return MONTH_START.isoformat(), MONTH_END.isoformat()
 
 
 def sb_client():
@@ -61,9 +80,22 @@ def sb_client():
 
 
 def load_json(name: str):
-    import json
     path = ATTENDANCE_FILE if name == "attendance_october_2026.json" else ROOT / "data" / name
-    return json.loads(path.read_text(encoding="utf-8"))
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    if name == "pending_workflows.json":
+        for index, item in enumerate(rows.get("pending_shifts", [])):
+            item["date"] = upcoming_demo_date(index)
+        for index, item in enumerate(rows.get("pending_leaves", [])):
+            item["leave_date"] = upcoming_demo_date(index + len(rows.get("pending_shifts", [])) + 2)
+        return rows
+
+    if isinstance(rows, list):
+        date_fields = ("work_date", "date", "leave_date")
+        for item in rows:
+            for field in date_fields:
+                if item.get(field):
+                    item[field] = current_month_date(item[field])
+    return rows
 
 
 def auth_users_map(sb):
@@ -104,14 +136,15 @@ def main(force: bool = False):
         )
 
     if force:
-        print("[1/6] Xoá dữ liệu demo tháng 10/2026...")
+        start_date, end_date = date_range()
+        print(f"[1/6] Xoá dữ liệu demo tháng {TODAY.month:02d}/{TODAY.year}...")
         demo_ids = [x["id"] for x in existing_rows]
         if demo_ids:
             sb.table("attendance_punches").delete().eq("device_id", DEMO_DEVICE).execute()
             sb.table("attendance_logs").delete().eq("device_id", DEMO_DEVICE).execute()
-            sb.table("shifts").delete().gte("work_date", "2026-10-01").lte("work_date", "2026-10-31").in_("user_id", demo_ids).execute()
-            sb.table("daily_notes").delete().gte("note_date", "2026-10-01").lte("note_date", "2026-10-31").in_("user_id", demo_ids).execute()
-            sb.table("leave_requests").delete().gte("leave_date", "2026-10-01").lte("leave_date", "2026-10-31").in_("user_id", demo_ids).execute()
+            sb.table("shifts").delete().gte("work_date", start_date).lte("work_date", end_date).in_("user_id", demo_ids).execute()
+            sb.table("daily_notes").delete().gte("note_date", start_date).lte("note_date", end_date).in_("user_id", demo_ids).execute()
+            sb.table("leave_requests").delete().gte("leave_date", start_date).lte("leave_date", end_date).in_("user_id", demo_ids).execute()
 
     print("[2/6] Tạo/cập nhật 33 tài khoản demo...")
     existing_auth = auth_users_map(sb)
@@ -158,7 +191,7 @@ def main(force: bool = False):
                 "device_id": DEMO_DEVICE,
                 "device_pin": r["emp_code"],
                 "punched_at": f"{r['work_date']}T{hmss}{TZ}",
-                "verify_type": "face",
+                "verify_type": "demo",
                 "raw_status": "DEMO",
             })
         log_rows.append({
@@ -208,7 +241,7 @@ def main(force: bool = False):
     print("Quản lý : QL01 / " + DEMO_PASSWORD)
     print("Nhân viên: PC01 / " + DEMO_PASSWORD)
     print("Thiết bị giả lập: DEMO-ZK01")
-    print("Tháng dữ liệu: 10/2026")
+    print(f"Tháng dữ liệu: {TODAY.month:02d}/{TODAY.year}")
     print("Số lượt attendance: 800")
     print()
     print("Mở /admin để xem nhân viên, duyệt ca, bảng công và xuất Excel.")
@@ -217,6 +250,6 @@ def main(force: bool = False):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("--force", action="store_true", help="Làm mới dữ liệu demo tháng 10/2026")
+    p.add_argument("--force", action="store_true", help="Làm mới dữ liệu demo của tháng hiện tại")
     args = p.parse_args()
     main(force=args.force)

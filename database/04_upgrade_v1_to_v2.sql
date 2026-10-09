@@ -72,9 +72,10 @@ for each row execute function public.set_updated_at();
 
 -- 6) Secure payroll view with RLS-aware security_invoker.
 -- Payroll chỉ lấy ca đã duyệt; attendance thực tế có thì mới tính giờ/lương.
-alter view public.v_payroll_days set (security_invoker = true);
+-- Cần drop view cũ trước khi recreate để migration chạy idempotent trên DB cũ / dev.
+drop view if exists public.v_payroll_days;
 
-create or replace view public.v_payroll_days
+create view public.v_payroll_days
 with (security_invoker = true)
 as
 with keys as (

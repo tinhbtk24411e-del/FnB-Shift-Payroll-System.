@@ -12,6 +12,7 @@ __pycache__/
 outbox.db
 agent/data/*
 !agent/data/.gitkeep
+!agent/data/zk_device_check.py
 web/node_modules/
 web/.next/
 *.tsbuildinfo

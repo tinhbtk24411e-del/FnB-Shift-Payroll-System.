@@ -16,10 +16,11 @@ const BADGE: Record<Status, string> = {
 const LABEL: Record<Status, string> = { pending: "Chờ duyệt", approved: "Đã duyệt", rejected: "Từ chối" };
 const REASONS = ["Việc gia đình", "Ốm / khám bệnh", "Lịch học", "Việc cá nhân", "Khác"];
 const PRESETS = {
-  "Ca 1": { start: "14:00", end: "22:45" },
-  "Ca 2": { start: "17:00", end: "22:45" },
+  "Ca sáng": { start: "06:00", end: "14:00" },
+  "Ca chiều": { start: "14:00", end: "23:00" },
 } as const;
 type ShiftName = keyof typeof PRESETS;
+type ShiftLabel = ShiftName | "Ca gãy";
 type EmployeeTab = "home" | "shift" | "attendance" | "pay" | "leave";
 
 const iso = (d: Date) => d.toLocaleDateString("sv-SE");
@@ -35,9 +36,9 @@ const formatDuration = (total: number) => `${Math.floor(total / 60)} giờ${tota
 const dateLabel = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString("vi-VN", {
   weekday: "long", day: "2-digit", month: "2-digit", year: "numeric",
 });
-const shiftNameFor = (start: string, end: string): ShiftName | "Tùy chỉnh" => {
+const shiftNameFor = (start: string, end: string): ShiftLabel => {
   const found = Object.entries(PRESETS).find(([, time]) => time.start === start && time.end === end);
-  return (found?.[0] as ShiftName | undefined) ?? "Tùy chỉnh";
+  return (found?.[0] as ShiftName | undefined) ?? "Ca gãy";
 };
 
 export default function ShiftRegistration({ me }: { me: Me }) {
@@ -54,7 +55,7 @@ export default function ShiftRegistration({ me }: { me: Me }) {
   const [formDate, setFormDate] = useState(iso(new Date()));
   const [formStart, setFormStart] = useState("");
   const [formEnd, setFormEnd] = useState("");
-  const [shiftName, setShiftName] = useState<ShiftName | "Tùy chỉnh">("Tùy chỉnh");
+  const [shiftName, setShiftName] = useState<ShiftLabel>("Ca gãy");
   const [managerNote, setManagerNote] = useState("");
   const [busy, setBusy] = useState(false);
   const days = useMemo(
@@ -162,7 +163,7 @@ export default function ShiftRegistration({ me }: { me: Me }) {
     setFormEnd(hm(existing?.check_out_1 ?? null));
     setShiftName(existing?.check_in_1 && existing.check_out_1
       ? shiftNameFor(hm(existing.check_in_1), hm(existing.check_out_1))
-      : "Tùy chỉnh");
+      : "Ca gãy");
     setManagerNote("");
     setFormOpen(true);
   }
@@ -174,7 +175,7 @@ export default function ShiftRegistration({ me }: { me: Me }) {
     const end = hm(existing?.check_out_1 ?? null);
     setFormStart(start);
     setFormEnd(end);
-    setShiftName(start && end ? shiftNameFor(start, end) : "Tùy chỉnh");
+    setShiftName(start && end ? shiftNameFor(start, end) : "Ca gãy");
   }
 
   async function submitShift(event: FormEvent<HTMLFormElement>) {
@@ -456,16 +457,16 @@ export default function ShiftRegistration({ me }: { me: Me }) {
               <div>
                 <p className="text-xs font-semibold text-slate-700">Loại ca</p>
                 <div className="mt-2 grid grid-cols-3 gap-2">
-                  {(["Ca 1", "Ca 2", "Tùy chỉnh"] as const).map((name) => (
+                  {(["Ca sáng", "Ca chiều", "Ca gãy"] as const).map((name) => (
                     <button key={name} type="button" onClick={() => {
                       setShiftName(name);
-                      if (name !== "Tùy chỉnh") {
+                      if (name === "Ca sáng" || name === "Ca chiều") {
                         setFormStart(PRESETS[name].start);
                         setFormEnd(PRESETS[name].end);
                       }
                     }} className={`min-h-10 rounded-xl border px-2 text-xs font-semibold transition ${shiftName === name ? "border-orange-500 bg-orange-50 text-orange-800 ring-2 ring-orange-100" : "border-slate-200 text-slate-600 hover:border-orange-200"}`}>
                       {name}
-                      {name !== "Tùy chỉnh" && <span className="mt-0.5 block text-[9px] font-normal opacity-75">{PRESETS[name].start} – {PRESETS[name].end}</span>}
+                      {(name === "Ca sáng" || name === "Ca chiều") && <span className="mt-0.5 block text-[9px] font-normal opacity-75">{PRESETS[name].start} – {PRESETS[name].end}</span>}
                     </button>
                   ))}
                 </div>

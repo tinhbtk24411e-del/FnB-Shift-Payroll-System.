@@ -1,36 +1,25 @@
 #!/usr/bin/env python3
 """ZKTeco / Ronald Jack -> Supabase attendance sync agent (V2).
 
-Luồng:
-  Máy chấm công --LAN--> raw punches -> SQLite outbox -> Supabase.attendance_punches
-                                      -> ghép tối đa 2 cặp -> attendance_logs
+Demo mode reads sample attendance from a JSON file. Real-device mode reads
+fingerprint punches over the local network and requires ZK_IP.
 
-Biến môi trường:
-  ZK_IP                  bắt buộc
+Environment variables:
+  ZK_IP                  required outside demo mode
   ZK_PORT=4370
   ZK_PASSWORD=0
   DEVICE_ID=ZK-01
-  SUPABASE_URL           bắt buộc
-  SUPABASE_SERVICE_KEY   bắt buộc
-  SYNC_DAYS=3            đọc lại N ngày để chống sót log
-  INTERVAL_MIN=15        chu kỳ chạy
+  SUPABASE_URL           required
+  SUPABASE_SERVICE_KEY   required
+  SYNC_DAYS=3            reread the last N days to catch missed punches
+  INTERVAL_MIN=15        polling interval
   TZ_NAME=Asia/Ho_Chi_Minh
   CACHE_DB=outbox.db
-
-Quy tắc ghép:
-  - Sắp xếp các lần quẹt trong cùng ngày.
-  - Hai lần quẹt cách nhau <= 1 phút được xem là quẹt đúp và giữ 1 lần.
-  - Cặp 1 = punch 1 -> punch 2.
-  - Cặp 2 = punch 3 -> punch 4.
-  - Nếu có punch lẻ cuối cùng, hệ thống giữ giờ vào nhưng để giờ ra = NULL.
-  - Nếu > 4 punch hợp lệ/ngày, attendance_logs chỉ lưu 2 cặp; raw logs vẫn giữ đủ
-    để kiểm toán. Agent ghi warning để quản lý biết có thể cần quy tắc riêng.
-
-Ca qua nửa đêm vẫn được gom theo ngày lịch. Muốn tính ca qua đêm theo shift,
-phase sau sẽ dùng work_date từ shifts để ghép lại.
+  DEMO_FILE=web/data/demo_attendance_october_2026.json
 """
 
 import argparse
+import json
 import logging
 import os
 import sqlite3
@@ -38,6 +27,7 @@ import sys
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from supabase import create_client
@@ -50,7 +40,7 @@ DOUBLE_PUNCH = timedelta(minutes=1)
 MAX_PAIRS = 2
 
 
-def retry(fn, tries=4, base=2.0, what="thao tác"):
+def retry(fn, tries=4, base=2.0, what="operation"):
     for i in range(1, tries + 1):
         try:
             return fn()
@@ -58,7 +48,7 @@ def retry(fn, tries=4, base=2.0, what="thao tác"):
             if i == tries:
                 raise
             wait = base ** i
-            log.warning("%s lỗi (%s) - thử lại lần %d sau %.0fs", what, exc, i, wait)
+            log.warning("%s failed (%s); retry %d in %.0fs", what, exc, i, wait)
             time.sleep(wait)
 
 
@@ -94,7 +84,7 @@ def read_device(since: datetime):
         ip,
         port=int(os.getenv("ZK_PORT", 4370)),
         timeout=15,
-        password=int(os.getenv("ZK_PASSWORD", 0)),
+        password=int(os.getenv("ZK_PASSWORD", "0") or 0),
         force_udp=False,
         ommit_ping=False,
     )
@@ -118,8 +108,43 @@ def read_device(since: datetime):
         conn.disconnect()
 
 
+def load_demo_events(file_path: str | None, since: datetime):
+    default_file = Path(__file__).resolve().parent.parent / "web" / "data" / "demo_attendance_october_2026.json"
+    demo_file = Path(file_path) if file_path else default_file
+    if not demo_file.exists():
+        return []
+
+    try:
+        rows = json.loads(demo_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        log.warning("Could not read demo file %s", demo_file)
+        return []
+
+    events = []
+    for row in rows or []:
+        for key in ("check_in_1", "check_out_1", "check_in_2", "check_out_2"):
+            raw = row.get(key)
+            if not raw:
+                continue
+            try:
+                ts = datetime.fromisoformat(f"{row['work_date']}T{raw}").replace(tzinfo=TZ)
+            except ValueError:
+                continue
+            if ts < since:
+                continue
+            events.append(
+                {
+                    "pin": str(row.get("emp_code") or row.get("device_pin") or "unknown"),
+                    "timestamp": ts,
+                    "verify_type": "demo",
+                    "raw_status": "DEMO",
+                }
+            )
+    return events
+
+
 def dedupe_punches(items):
-    """Giữ thứ tự thời gian; loại quẹt đúp liên tiếp <= 1 phút."""
+    """Keep chronological order and remove consecutive duplicate punches <= 1 minute apart."""
     items = sorted(items)
     kept = []
     for ts in items:
@@ -138,7 +163,7 @@ def pair_daily(punches_by_pin_day):
 
         if len(times) > MAX_PAIRS * 2:
             log.warning(
-                "%s ngày %s có %d lần quẹt hợp lệ; chỉ đưa 4 lần đầu vào 2 cặp. Raw logs vẫn được giữ.",
+                "%s on %s has %d valid punches; only the first four are paired. Raw logs are retained.",
                 pin,
                 day,
                 len(times),
@@ -174,7 +199,7 @@ def load_pin_map(sb):
         .not_.is_("device_pin", "null")
         .execute()
         .data,
-        what="tải danh sách nhân viên",
+        what="load employee list",
     )
     return {str(u["device_pin"]): u["id"] for u in (data or []) if u.get("device_pin")}
 
@@ -216,7 +241,7 @@ def push_raw(db, sb, pin_map) -> int:
             lambda p=payload: sb.table("attendance_punches")
             .upsert(p, on_conflict="device_id,device_pin,punched_at")
             .execute(),
-            what="đẩy raw attendance",
+            what="upload raw attendance",
         )
         db.executemany(
             "delete from punch_outbox where device_id=? and pin=? and punched_at=?",
@@ -226,7 +251,7 @@ def push_raw(db, sb, pin_map) -> int:
         sent += len(payload)
 
     if unknown:
-        log.warning("Mã chấm công chưa được gán users.device_pin: %s", sorted(unknown))
+        log.warning("Attendance PINs are not assigned to users.device_pin: %s", sorted(unknown))
     return sent
 
 
@@ -259,62 +284,65 @@ def push_summaries(sb, grouped, pin_map):
             lambda p=batch: sb.table("attendance_logs")
             .upsert(p, on_conflict="user_id,work_date")
             .execute(),
-            what="đẩy attendance summary",
+            what="upload attendance summary",
         )
 
     if unknown:
-        log.warning("Không thể tạo attendance summary cho pin: %s", sorted(unknown))
+        log.warning("Could not create attendance summary for PINs: %s", sorted(unknown))
     return len(payload)
 
 
-def run_once(days: int):
+def run_once(days: int, demo_file: str | None = None, demo: bool = False):
     db = open_cache()
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
     since = datetime.now(TZ) - timedelta(days=days)
+    events = []
 
     try:
-        events = retry(lambda: read_device(since), what="đọc máy chấm công")
-        cache_rows(
-            db,
-            [
-                (
-                    DEVICE_ID,
-                    e["pin"],
-                    e["timestamp"].isoformat(),
-                    e["verify_type"],
-                    e["raw_status"],
-                )
-                for e in events
-            ],
-        )
-        log.info("Đọc %d raw punch từ máy", len(events))
+        if demo:
+            events = load_demo_events(demo_file, since)
+            log.info("Demo mode: read %d raw punches from %s", len(events), demo_file or "default demo file")
+        else:
+            events = retry(lambda: read_device(since), what="read attendance device")
+            cache_punches(
+                db,
+                [
+                    (
+                        DEVICE_ID,
+                        e["pin"],
+                        e["timestamp"].isoformat(),
+                        e["verify_type"],
+                        e["raw_status"],
+                    )
+                    for e in events
+                ],
+            )
+            log.info("Read %d raw punches from device", len(events))
     except Exception as exc:  # noqa: BLE001
-        log.error("Không đọc được máy chấm công: %s", exc)
+        log.error("Could not read attendance device: %s", exc)
         events = []
 
     try:
         pin_map = load_pin_map(sb)
         sent = push_raw(db, sb, pin_map)
-        log.info("Đã đẩy %d raw punch lên Supabase", sent)
+        log.info("Uploaded %d raw punches to Supabase", sent)
     except Exception as exc:  # noqa: BLE001
-        log.error("Đẩy raw punch thất bại: %s", exc)
+        log.error("Raw punch upload failed: %s", exc)
         pin_map = {}
 
-    # Summary được dựng từ dữ liệu máy vừa đọc trong vòng này.
-    # Vòng sau sẽ đọc lại SYNC_DAYS ngày nên summary có cơ hội tự phục hồi.
     if events and pin_map:
         grouped = defaultdict(list)
         for e in events:
             grouped[(e["pin"], e["timestamp"].date().isoformat())].append(e["timestamp"])
         try:
             count = push_summaries(sb, grouped, pin_map)
-            log.info("Đã cập nhật %d attendance summary", count)
+            log.info("Updated %d attendance summaries", count)
         except Exception as exc:  # noqa: BLE001
-            log.error("Đẩy attendance summary thất bại: %s", exc)
+            log.error("Attendance summary upload failed: %s", exc)
 
     left = db.execute("select count(*) from punch_outbox").fetchone()[0]
     if left:
-        log.info("Outbox còn %d raw punch; sẽ gửi lại vòng sau", left)
+        log.info("Outbox has %d pending raw punches; they will be retried", left)
     db.close()
 
 
@@ -322,16 +350,20 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--days", type=int, default=int(os.getenv("SYNC_DAYS", 3)))
+    ap.add_argument("--demo", action="store_true", help="Read sample punches instead of connecting to a device")
+    ap.add_argument("--demo-file", default=os.getenv("DEMO_FILE"), help="Optional path to a demo JSON file")
     args = ap.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    for key in ("ZK_IP", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"):
-        if not os.getenv(key):
-            sys.exit(f"Thiếu biến môi trường {key}")
+
+    if not args.demo:
+        for key in ("ZK_IP", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"):
+            if not os.getenv(key):
+                sys.exit(f"Missing required environment variable {key}")
 
     interval = int(os.getenv("INTERVAL_MIN", 15)) * 60
     while True:
-        run_once(args.days)
+        run_once(args.days, args.demo_file, args.demo)
         if args.once:
             break
         time.sleep(interval)

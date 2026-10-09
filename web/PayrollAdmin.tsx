@@ -22,6 +22,11 @@ type PayrollSummary = {
 const hm = (t: string | null) => (t ? t.slice(0, 5) : "");
 const mins = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
 const span = (a: string | null, b: string | null) => (a && b ? ((mins(b) - mins(a) + 1440) % 1440) / 60 : 0);
+const shiftKind = (start: string | null, end: string | null) => {
+  if (hm(start) === "06:00" && hm(end) === "14:00") return "Ca sáng";
+  if (hm(start) === "14:00" && hm(end) === "23:00") return "Ca chiều";
+  return "Ca gãy / tùy chỉnh";
+};
 const money = (n: number) => Math.round(n).toLocaleString("vi-VN") + " đ";
 const pad = (n: number) => String(n).padStart(2, "0");
 const shiftHours = (row: PayrollDay) =>
@@ -349,9 +354,26 @@ export default function PayrollAdmin({ approvalRequest }: { approvalRequest: num
               ))}
             </section>
 
+            <section aria-label="Quy trình duyệt ca và tính lương" className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 shadow-sm sm:p-5">
+              <h2 className="text-sm font-extrabold text-blue-950">Quy trình ca làm và tính công</h2>
+              <ol className="mt-3 grid gap-2 sm:grid-cols-4">
+                {[
+                  ["1", "Nhân viên đăng ký", "Chọn ca sáng 06:00–14:00, ca chiều 14:00–23:00 hoặc tự chọn giờ ca gãy."],
+                  ["2", "Quản lý duyệt", "Ca chỉ được đưa vào lịch làm sau khi quản lý chấp thuận."],
+                  ["3", "Ghi nhận chấm công", "Bản demo nhập giờ mẫu; khi kết nối thiết bị, máy vân tay ghi nhận giờ thực tế."],
+                  ["4", "Tính công và lương", "Bảng công/lương dùng giờ thực tế đã ghi nhận, không tự tính từ ca đăng ký."],
+                ].map(([number, title, description]) => (
+                  <li key={number} className="flex gap-2 rounded-xl bg-white/80 p-3">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-blue-100 text-[10px] font-extrabold text-blue-800">{number}</span>
+                    <div><p className="text-[11px] font-bold text-slate-800">{title}</p><p className="mt-1 text-[10px] leading-4 text-slate-500">{description}</p></div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
             <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div><h2 className="text-sm font-extrabold">Ca làm chờ duyệt <span className="text-orange-700">({shifts.length})</span></h2><p className="mt-1 text-[10px] text-slate-400">Chọn ca cần xử lý hoặc duyệt toàn bộ</p></div>
+                <div><h2 className="text-sm font-extrabold">Ca làm chờ duyệt <span className="text-orange-700">({shifts.length})</span></h2><p className="mt-1 text-[10px] text-slate-400">Kiểm tra nhân viên, ngày và khung giờ trước khi duyệt. Duyệt ca không tạo giờ công.</p></div>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => reviewShifts([...picked], "approved")} disabled={!picked.size} className="h-9 rounded-lg border border-orange-200 px-3 text-[10px] font-bold text-orange-700 disabled:opacity-40">Duyệt đã chọn</button>
                   <button type="button" onClick={() => reviewShifts(shifts.map((shift) => shift.id), "approved")} disabled={!shifts.length} className="h-9 rounded-lg bg-orange-600 px-3 text-[10px] font-bold text-white disabled:opacity-40">Duyệt tất cả</button>
@@ -369,7 +391,11 @@ export default function PayrollAdmin({ approvalRequest }: { approvalRequest: num
                         })} className="mt-1 accent-orange-600" />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div><p className="text-xs font-bold text-slate-800">{shift.users.full_name} <span className="font-medium text-slate-400">({shift.users.emp_code})</span></p><p className="mt-0.5 text-[10px] text-slate-500">{new Date(`${shift.work_date}T00:00:00`).toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" })} · {hm(shift.check_in_1)} – {hm(shift.check_out_1)}</p></div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-800">{shift.users.full_name} <span className="font-medium text-slate-400">({shift.users.emp_code})</span></p>
+                            <p className="mt-0.5 text-[10px] text-slate-500">{new Date(`${shift.work_date}T00:00:00`).toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" })} · {shiftKind(shift.check_in_1, shift.check_out_1)}</p>
+                            <p className="mt-1 text-[11px] font-semibold text-slate-700">{hm(shift.check_in_1)} – {hm(shift.check_out_1)}{shift.check_in_2 && shift.check_out_2 ? ` · ${hm(shift.check_in_2)} – ${hm(shift.check_out_2)}` : ""} <span className="font-normal text-slate-500">({(span(shift.check_in_1, shift.check_out_1) + span(shift.check_in_2, shift.check_out_2)).toFixed(1)} giờ dự kiến)</span></p>
+                          </div>
                           <span className="rounded-full bg-amber-50 px-2 py-1 text-[9px] font-bold text-amber-700">Chờ duyệt</span>
                         </div>
                         <div className="mt-2 grid grid-cols-2 gap-2">
